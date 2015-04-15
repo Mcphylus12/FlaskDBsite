@@ -1,0 +1,61 @@
+1. INSERT INTO Customer
+VALUES (1234, 'John Smith', 'john.smith@gmail.com');
+
+2. INSERT INTO Ticket(TicketID, Problem, Priority, LoggedTime, CustomerID, ProductID)
+VALUES (0001, 'its broken', 2, NOW(), 1234, 5271);
+
+3. INSERT INTO TicketUpdate
+VALUES(9564, 'Fixed something. Should work now', NOW(), 0001, 12);
+
+4. SELECT Ticket.*, MAX(TicketUpdate.UpdateTime) AS 'Last Update' 
+From Ticket, TicketUpdate
+WHERE Ticket.Status='OPEN' and Ticket.TicketID=TicketUpdate.TicketID
+GROUP BY Ticket.TicketID;
+
+5. UPDATE Ticket
+SET Status='CLOSED'
+WHERE TicketID=0001;
+
+6. SELECT Customer.Name AS 'Customer Name', Ticket.LoggedTime, Ticket.Problem, Staff.Name AS 'Staff Name', TicketUpdate.UpdateTime, TicketUpdate.Message 
+From Customer, Ticket, Staff, TicketUpdate
+Where Ticket.TicketID=2 AND 
+TicketUpdate.TicketID=Ticket.TicketID AND
+Ticket.CustomerID=Customer.CustomerID AND
+TicketUpdate.StaffID=Staff.StaffID
+ORDER BY TicketUpdate.UpdateTime ASC;
+
+7. SELECT Ticket.TicketID, COUNT(TicketUpdate.TIcketID) AS 'Updates', 
+DATEDIFF(MIN(TicketUpdate.UpdateTime), Ticket.LoggedTime) AS 'Time Before First Response', 
+DATEDIFF(MAX(TicketUpdate.UpdateTime), Ticket.LoggedTime) AS 'Time Before Last Response'
+FROM Ticket, TicketUpdate
+WHERE Ticket.Status='CLOSED' AND Ticket.TicketID=TicketUpdate.TicketID
+GROUP BY Ticket.TicketID;
+
+8. UPDATE Ticket
+Set Status='CLOSED'
+WHERE Ticket.TicketID IN (
+SELECT tn.TicketID FROM(
+  SELECT TicketUpdate.TicketID, DATEDIFF(NOW(), MAX(TicketUpdate.UpdateTime)) AS 'AGE'
+  FROM TicketUpdate
+  GROUP BY TicketUpdate.TicketID
+  HAVING DATEDIFF(NOW(), MAX(TicketUpdate.UpdateTime))>1
+) tn
+) AND Ticket.TicketID IN ( 
+  SELECT tm.TicketID FROM(
+    SELECT TicketUpdate.TicketID, TicketUpdate.StaffID, TicketUpdate.UpdateTime
+    FROM TicketUpdate
+    INNER JOIN(
+      SELECT TicketUpdate.TicketID, MAX(TicketUpdate.UpdateTime) AS 'lastDate'
+      FROM TicketUpdate
+      GROUP BY TicketUpdate.TicketID
+    ) t ON t.TicketID = TicketUpdate.TicketID AND t.lastDate=TicketUpdate.UpdateTime
+    WHERE TicketUpdate.StaffID IS NOT NULL
+  ) tm
+);
+
+9. DELETE FROM Customer
+WHERE CustomerID=1 AND CustomerID NOT IN(
+SELECT DISTINCT Ticket.CustomerID FROM Ticket
+);
+
+
