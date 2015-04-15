@@ -1,0 +1,51 @@
+CREATE TABLE Staff
+( 
+ StaffID INTEGER NOT NULL,
+ Name VARCHAR(40) NOT NULL, 
+ PRIMARY KEY (StaffID)
+);
+ 
+CREATE TABLE Product 
+( 
+ ProductID INTEGER NOT NULL, 
+ Name VARCHAR(40) NOT NULL,
+ PRIMARY KEY (ProductID)
+); 
+ 
+CREATE TABLE Customer 
+( 
+ CustomerID INTEGER NOT NULL, 
+ Name VARCHAR(40) NOT NULL, 
+ Email VARCHAR(40) NOt NULL,
+ PRIMARY KEY (CustomerID)
+);
+ 
+CREATE TABLE Ticket 
+( 
+ TicketID INTEGER NOT NULL, 
+ Problem VARCHAR(1000) NOT NULL, 
+ Status VARCHAR(20) NOT NULL
+ DEFAULT 'OPEN',
+ CONSTRAINT statusCheck CHECK (Status='OPEN' OR Status='CLOSED'), 
+ Priority INTEGER NOT NULL 
+ DEFAULT 3,
+ CONSTRAINT priorityCheck CHECK (Priority>0 AND Priority<4), 
+ LoggedTime TIMESTAMP NOT NULL, 
+ CustomerID INTEGER NOT NULL,
+ FOREIGN KEY (CustomerID) REFERENCES Customer(CustomerID),
+ ProductID INTEGER NOT NULL,
+ FOREIGN KEY (ProductID) REFERENCES Product(ProductID),
+ PRIMARY KEY (TicketID)
+);
+ 
+CREATE TABLE TicketUpdate 
+( 
+ TicketUpdateID INTEGER NOT NULL, 
+ Message VARCHAR(1000) NOT NULL, 
+ UpdateTime TIMESTAMP NOT NULL, 
+ TicketID INTEGER NOT NULL,
+ FOREIGN KEY (TicketID) REFERENCES Ticket(TicketID),
+ StaffID INTEGER,
+ FOREIGN KEY (StaffID) REFERENCES Staff(StaffID),
+ PRIMARY KEY (TicketUpdateID)
+);
