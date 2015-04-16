@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta http-equiv="content-type" content="text/html;charset=utf-8"/>
+    <title>ticket database site</title>
+
+
+
+</head>
+<body>
+    <form action='addcustomer' method="post">
+        <h3>Add A Customer</h3><br />
+        Customer ID : <br />
+        <input type="text" name="ID"><br />
+        Customer name : <br />
+        <input type="text" name="name"><br />
+        Customer email : <br />
+        <input type="text" name="email"><br />
+        <input type="submit" value="Submit">
+    </form>
+    <br />
+    <br />
+    <br />
+    <form action='addticket' method="post">
+       <h3>Add A Ticket</h3><br />
+        Ticket ID : <br />
+        <input type="text" name="ID"><br />
+        Problem : <br />
+        <input type="text" name="problem"><br />
+        Priority : <br />
+        <input type="text" name="priority"><br />
+        Customer ID : <br />
+        <input type="text" name="cusID"><br />
+        Product ID : <br />
+        <input type="text" name="prodID"><br />
+        <input type="submit" value="Submit">
+    </form>
+    <br />
+    <br />
+    <br />
+    <form action='addupdate' method="post">
+       <h3>Add An Update</h3><br />
+        Ticket update ID : <br />
+        <input type="text" name="ID"><br />
+        message : <br />
+        <input type="text" name="message"><br />
+        Ticket Id : <br />
+        <input type="text" name="tikID"><br />
+        Staff ID : <br />
+        <input type="text" name="StaffID"><br />
+        <input type="submit" value="Submit">
+    </form>
+    <br />
+    <br />
+    <br />
+    <form action='listopenticks' method="post">
+       <h3>List open tickets</h3><br />
+        <input type="submit" value="List open tickets">
+    </form>
+    <br />
+    <br />
+    <br />
+    <form action='closeTick' method="post">
+       <h3>Close a ticket</h3><br />
+        Ticket ID : <br />
+        <input type="text" name="ID"><br />
+        <input type="submit" value="Submit">
+    </form>
+    <br />
+    <br />
+    <br />
+    <form action='getmessages' method="post">
+       <h3>view ticket</h3><br />
+        Ticket ID : <br />
+        <input type="text" name="ID"><br />
+        <input type="submit" value="Submit">
+    </form>
+    <br />
+    <br />
+    <br />
+    <form action='getreport' method="post">
+       <h3>view closed tickets</h3><br />
+        <input type="submit" value="View Closed Tickets">
+    </form>
+    <br />
+    <br />
+    <br />
+    <form action='closeOld' method="post">
+       <h3>Close old tickets</h3><br />
+        <input type="submit" value="Close Old tickets">
+    </form>
+    <br />
+    <br />
+    <br />
+    <form action='delCus' method="post">
+       <h3>delete a customer</h3><br />
+        Customer ID : <br />
+        <input type="text" name="ID"><br />
+        <input type="submit" value="Submit">
+    </form>
+    <br />
+    <br />
+    <br />
+</body>
+</html>
