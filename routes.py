@@ -4,7 +4,7 @@ from datetime import datetime, timedelta
 
 app = Flask(__name__)
 
-dbCreds = 'dbname=postgres user=test password=Mandatory1 host=localhost';
+dbCreds = 'dbname=postgres user=postgres password=Mandatory1 host=localhost';
 
 @app.route('/')
 @app.route('/home')
@@ -13,51 +13,68 @@ def home():
 
 @app.route('/addcustomer', methods=['POST'])
 def addCustomer():
-    ID = request.form['ID']
+    ID = int(request.form['ID'])
     name = request.form['name']
     email = request.form['email']
+    insertCus(ID, name, email)
+    return render_template('home.html')
 
 @app.route('/addticket', methods=['POST'])
 def addticket():
-    ID = request.form['ID']
+    ID = int(request.form['ID'])
     problem = request.form['problem']
-    priority = request.form['priority']
-    cusID = request.form['cusID']
-    prodID = request.form['prodID']
+    priority = int(request.form['priority'])
+    cusID = int(request.form['cusID'])
+    prodID = int(request.form['prodID'])
+    insertTick(ID, problem, priority, cusID, prodID)
+    return render_template('results.html', title='Added Ticket', headings=['ID', 'problem', 'priority', 'Customer ID', 'Product Id'], results=[[ID, problem, priority, cusID, prodID]])
 
 @app.route('/addupdate', methods=['POST'])
 def addupdate():
-    ID = request.form['ID']
+    ID = int(request.form['ID'])
     message = request.form['message']
-    tikID = request.form['tikID']
+    tikID = int(request.form['tikID'])
     StaffID = request.form['StaffID']
+    if not StaffID.strip():
+        StaffID=None
+    else: StaffID = int(StaffID)
+    insertTickUp(ID, message, tikID, StaffID)
+    return render_template('home.html')
 
 @app.route('/listopenticks', methods=['POST'])
 def listopenticks():
+    return render_template('results.html', title='Open Tickets', headings=['Ticket ID', 'Problem', 'Status', 'Priority', 'Logged Time', 'Customer ID', 'Product ID', 'Last Update'], results=viewOpenTicks())
 
 @app.route('/closeTick', methods=['POST'])
 def closeTick():
-    ID = request.form['ID']
+    ID = int(request.form['ID'])
+    closeTic(ID)
+    return render_template('home.html')
 
 @app.route('/getmessages', methods=['POST'])
-def getmessages():
-    ID = request.form['ID']
+def viewmessages():
+    ID = int(request.form['ID'])
+    return render_template('results.html', title='Ticket Review ID=' + str(ID), headings=['Customer Name', 'Logged Time', 'Problem', 'Staff Name', 'Update Time', 'Message'], results=getMessages(ID))
 
 @app.route('/getreport', methods=['POST'])
 def getreport():
+    return render_template('results.html', title='Closed Tickets', headings=['Ticket ID', '# of Updates', 'Time before First Response', 'Time before last respnse'],  results=getClosedReports())
 
 @app.route('/closeOld', methods=['POST'])
 def closeOld():
+    closeOldTiks()
+    return render_template('home.html')
 
 @app.route('/delCus', methods=['POST'])
 def delCus():
-        ID = request.form['ID']
-
+        ID = int(request.form['ID'])
+        delCus(ID)
+        return render_template('home.html')
 
 def insertCus(ID, name, email):
     conn = psycopg2.connect(dbCreds);
     cur = conn.cursor();
-    cur.execute('INSERT INTO Customer VALUES (%s, %s, %s)', (ID, name, email));
+    cur.execute('INSERT INTO Customer VALUES (%s, %s, %s)', [ID, name, email]);
     conn.commit();
     cur.close()
     conn.close();
@@ -65,15 +82,15 @@ def insertCus(ID, name, email):
 def insertTick(TicketID, Problem, Priority, CustomerID, ProductID):
     conn = psycopg2.connect(dbCreds);
     cur = conn.cursor();
-    cur.execute('INSERT INTO Ticket(TicketID, Problem, Priority, LoggedTime, CustomerID, ProductID) VALUES (%s, %s, %s, NOW(), %s, %s)', (TicketID, Problem, Priority, CustomerID, ProductID));
+    cur.execute('INSERT INTO Ticket(TicketID, Problem, Priority, LoggedTime, CustomerID, ProductID) VALUES (%s, %s, %s, NOW(), %s, %s)', [TicketID, Problem, Priority, CustomerID, ProductID]);
     conn.commit();
     cur.close()
     conn.close();
 
-def insertTickUp(ID, message, updateTime, ticketID, staffID):
+def insertTickUp(ID, message, ticketID, staffID):
     conn = psycopg2.connect(dbCreds);
     cur = conn.cursor();
-    cur.execute('INSERT INTO TicketUpdate VALUES(%s, %s, %s, %s, %s)', (ID, message, updateTime, ticketID, staffID));
+    cur.execute('INSERT INTO TicketUpdate VALUES(%s, %s, NOW(), %s, %s)', [ID, message, ticketID, staffID]);
     conn.commit();
     cur.close()
     conn.close();
@@ -81,7 +98,10 @@ def insertTickUp(ID, message, updateTime, ticketID, staffID):
 def viewOpenTicks():
     conn = psycopg2.connect(dbCreds);
     cur = conn.cursor();
-    cur.execute("SELECT Ticket.*, MAX(TicketUpdate.UpdateTime) AS 'Last Update' From Ticket, TicketUpdate WHERE Ticket.Status='OPEN' and Ticket.TicketID=TicketUpdate.TicketID GROUP BY Ticket.TicketID");
+    cur.execute("""SELECT Ticket.*, MAX(TicketUpdate.UpdateTime)
+    From Ticket LEFT JOIN TicketUpdate on Ticket.TicketID=TicketUpdate.TicketID
+    WHERE Ticket.Status='OPEN'
+    GROUP BY Ticket.TicketID""");
     result = cur.fetchall();
     conn.commit();
     cur.close()
@@ -91,7 +111,7 @@ def viewOpenTicks():
 def closeTic(ID):
     conn = psycopg2.connect(dbCreds);
     cur = conn.cursor();
-    cur.execute("UPDATE Ticket SET Status='CLOSED' WHERE TicketID=%s", (ID));
+    cur.execute("UPDATE Ticket SET Status='CLOSED' WHERE TicketID=%s", [ID]);
     conn.commit();
     cur.close()
     conn.close();
@@ -99,7 +119,7 @@ def closeTic(ID):
 def getMessages(ID):
     conn = psycopg2.connect(dbCreds);
     cur = conn.cursor();
-    cur.execute("SELECT Customer.Name AS 'Customer Name', Ticket.LoggedTime, Ticket.Problem, Staff.Name AS 'Staff Name', TicketUpdate.UpdateTime, TicketUpdate.Message From Customer, Ticket, Staff, TicketUpdate Where Ticket.TicketID=%s AND  TicketUpdate.TicketID=Ticket.TicketID AND Ticket.CustomerID=Customer.CustomerID AND TicketUpdate.StaffID=Staff.StaffID ORDER BY TicketUpdate.UpdateTime ASC", (ID));
+    cur.execute("SELECT Customer.Name, Ticket.LoggedTime, Ticket.Problem, Staff.Name, TicketUpdate.UpdateTime, TicketUpdate.Message From Customer, Ticket, Staff RIGHT JOIN TicketUpdate ON TicketUpdate.StaffID=Staff.StaffID Where Ticket.TicketID=%s AND  TicketUpdate.TicketID=Ticket.TicketID AND Ticket.CustomerID=Customer.CustomerID ORDER BY TicketUpdate.UpdateTime ASC", [ID]);
     result = cur.fetchall();
     conn.commit();
     cur.close()
@@ -109,7 +129,7 @@ def getMessages(ID):
 def getClosedReports():
     conn = psycopg2.connect(dbCreds);
     cur = conn.cursor();
-    cur.execute("SELECT Ticket.TicketID, COUNT(TicketUpdate.TIcketID) AS 'Updates', DATEDIFF(MIN(TicketUpdate.UpdateTime), Ticket.LoggedTime) AS 'Time Before First Response', DATEDIFF(MAX(TicketUpdate.UpdateTime), Ticket.LoggedTime) AS 'Time Before Last Response' FROM Ticket, TicketUpdate WHERE Ticket.Status='CLOSED' AND Ticket.TicketID=TicketUpdate.TicketID GROUP BY Ticket.TicketID");
+    cur.execute("SELECT Ticket.TicketID, COUNT(TicketUpdate.TIcketID), MIN(TicketUpdate.UpdateTime) - Ticket.LoggedTime, MAX(TicketUpdate.UpdateTime) - Ticket.LoggedTime FROM Ticket LEFT JOIN TicketUpdate on Ticket.TicketID=TicketUpdate.TicketID WHERE Ticket.Status='CLOSED' GROUP BY Ticket.TicketID");
     result = cur.fetchall();
     conn.commit();
     cur.close()
@@ -117,28 +137,21 @@ def getClosedReports():
     return result;
 
 def closeOldTiks():
-        conn = psycopg2.connect(dbCreds);
+    conn = psycopg2.connect(dbCreds);
     cur = conn.cursor();
     cur.execute("""UPDATE Ticket
 Set Status='CLOSED'
 WHERE Ticket.TicketID IN (
 SELECT tn.TicketID FROM(
-  SELECT TicketUpdate.TicketID, DATEDIFF(NOW(), MAX(TicketUpdate.UpdateTime)) AS 'AGE'
+  SELECT TicketUpdate.TicketID, (NOW() -  MAX(TicketUpdate.UpdateTime))
   FROM TicketUpdate
   GROUP BY TicketUpdate.TicketID
-  HAVING DATEDIFF(NOW(), MAX(TicketUpdate.UpdateTime))>1
+  HAVING (NOW() -  MAX(TicketUpdate.UpdateTime))>interval '1 day'
 ) tn
 ) AND Ticket.TicketID IN (
-  SELECT tm.TicketID FROM(
-    SELECT TicketUpdate.TicketID, TicketUpdate.StaffID, TicketUpdate.UpdateTime
+    SELECT TicketUpdate.TicketID
     FROM TicketUpdate
-    INNER JOIN(
-      SELECT TicketUpdate.TicketID, MAX(TicketUpdate.UpdateTime) AS 'lastDate'
-      FROM TicketUpdate
-      GROUP BY TicketUpdate.TicketID
-    ) t ON t.TicketID = TicketUpdate.TicketID AND t.lastDate=TicketUpdate.UpdateTime
     WHERE TicketUpdate.StaffID IS NOT NULL
-  ) tm
 )""");
     conn.commit();
     cur.close()
@@ -147,7 +160,7 @@ SELECT tn.TicketID FROM(
 def delCus(ID):
     conn = psycopg2.connect(dbCreds);
     cur = conn.cursor();
-    cur.execute("DELETE FROM Customer WHERE CustomerID=%s AND CustomerID NOT IN( SELECT DISTINCT Ticket.CustomerID FROM Ticket)", (ID));
+    cur.execute("DELETE FROM Customer WHERE CustomerID=%s AND CustomerID NOT IN( SELECT DISTINCT Ticket.CustomerID FROM Ticket)", [ID]);
     conn.commit();
     cur.close()
     conn.close();

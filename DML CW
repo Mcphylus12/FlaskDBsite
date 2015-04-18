@@ -7,9 +7,9 @@ VALUES (0001, 'its broken', 2, NOW(), 1234, 5271);
 3. INSERT INTO TicketUpdate
 VALUES(9564, 'Fixed something. Should work now', NOW(), 0001, 12);
 
-4. SELECT Ticket.*, MAX(TicketUpdate.UpdateTime) AS 'Last Update' --finds the latest date for the group of update times
-From Ticket, TicketUpdate
-WHERE Ticket.Status='OPEN' and Ticket.TicketID=TicketUpdate.TicketID --joins the two table and selects only open tickets
+4. SELECT Ticket.*, MAX(TicketUpdate.UpdateTime) AS LastUpdate --finds the latest date for the group of update times
+From Ticket LEFT JOIN TicketUpdate ON Ticket.TicketID=TicketUpdate.TicketID
+WHERE Ticket.Status='OPEN'--joins the two table and selects only open tickets
 GROUP BY Ticket.TicketID;
 --lists open tickets
 
@@ -17,20 +17,20 @@ GROUP BY Ticket.TicketID;
 SET Status='CLOSED'
 WHERE TicketID=0001;
 
-6. SELECT Customer.Name AS 'Customer Name', Ticket.LoggedTime, Ticket.Problem, Staff.Name AS 'Staff Name', TicketUpdate.UpdateTime, TicketUpdate.Message 
-From Customer, Ticket, Staff, TicketUpdate
+6. SELECT Customer.Name AS CustomerName, Ticket.LoggedTime, Ticket.Problem, Staff.Name AS StaffName, TicketUpdate.UpdateTime, TicketUpdate.Message 
+From Customer, Ticket, Staff RIGHT JOIN TicketUpdate on TicketUpdate.StaffID=Staff.StaffID
 Where Ticket.TicketID=2 AND 
 TicketUpdate.TicketID=Ticket.TicketID AND
-Ticket.CustomerID=Customer.CustomerID AND
-TicketUpdate.StaffID=Staff.StaffID --joins all 3 tables
+Ticket.CustomerID=Customer.CustomerID
+ --joins all 3 tables
 ORDER BY TicketUpdate.UpdateTime ASC; --lists dates chronologically
 --lists a ticket along with its problem and messages.
 
-7. SELECT Ticket.TicketID, COUNT(TicketUpdate.TIcketID) AS 'Updates', 
-DATEDIFF(MIN(TicketUpdate.UpdateTime), Ticket.LoggedTime) AS 'Time Before First Response',
-DATEDIFF(MAX(TicketUpdate.UpdateTime), Ticket.LoggedTime) AS 'Time Before Last Response'
-FROM Ticket, TicketUpdate
-WHERE Ticket.Status='CLOSED' AND Ticket.TicketID=TicketUpdate.TicketID
+7. SELECT Ticket.TicketID, COUNT(TicketUpdate.TIcketID) AS Updates, 
+MIN(TicketUpdate.UpdateTime) - Ticket.LoggedTime AS TimeBeforeFirstResponse,
+MAX(TicketUpdate.UpdateTime) - Ticket.LoggedTime AS TimeBeforeLastResponse
+FROM Ticket LEFT JOIN TicketUpdate on Ticket.TicketID=TicketUpdate.TicketID
+WHERE Ticket.Status='CLOSED'
 GROUP BY Ticket.TicketID;
 --gets the amount of updates in a ticket along with the time taken for the forst response and the last response
 
@@ -38,23 +38,16 @@ GROUP BY Ticket.TicketID;
 Set Status='CLOSED'
 WHERE Ticket.TicketID IN (
 SELECT tn.TicketID FROM(
-  SELECT TicketUpdate.TicketID, DATEDIFF(NOW(), MAX(TicketUpdate.UpdateTime)) AS 'AGE'
+  SELECT TicketUpdate.TicketID, (NOW() - MAX(TicketUpdate.UpdateTime)) AS AGE
   FROM TicketUpdate
   GROUP BY TicketUpdate.TicketID
-  HAVING DATEDIFF(NOW(), MAX(TicketUpdate.UpdateTime))>1 --finds tickets older than 24 hours
+  HAVING (NOW() - MAX(TicketUpdate.UpdateTime))> interval '1 day' --finds tickets older than 24 hours
 ) tn
-) AND Ticket.TicketID IN ( 
-  SELECT tm.TicketID FROM(
-    SELECT TicketUpdate.TicketID, TicketUpdate.StaffID, TicketUpdate.UpdateTime
+) AND Ticket.TicketID IN (
+    SELECT TicketUpdate.TicketID
     FROM TicketUpdate
-    INNER JOIN(
-      SELECT TicketUpdate.TicketID, MAX(TicketUpdate.UpdateTime) AS 'lastDate'
-      FROM TicketUpdate
-      GROUP BY TicketUpdate.TicketID
-    ) t ON t.TicketID = TicketUpdate.TicketID AND t.lastDate=TicketUpdate.UpdateTime
-    WHERE TicketUpdate.StaffID IS NOT NULL --finds tickets whose last response was by staff
-  ) tm
-);--close tickets that have not had a response from the customer in 24 hours
+    WHERE TicketUpdate.StaffID IS NOT NULL
+);--Check there is at least 1 response from staff
 
 9. DELETE FROM Customer
 WHERE CustomerID=1 AND CustomerID NOT IN(
