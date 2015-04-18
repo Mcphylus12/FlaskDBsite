@@ -4,7 +4,7 @@ from datetime import datetime, timedelta
 
 app = Flask(__name__)
 
-dbCreds = 'dbname=postgres user=postgres password=Mandatory1 host=localhost port=5432';
+dbCreds = 'dbname= user= password= host= port=';
 
 @app.route('/')
 @app.route('/home')
